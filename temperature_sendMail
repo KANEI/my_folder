@@ -1,0 +1,109 @@
+//グーグルフォームで検温データを集め、微熱・高熱の人、検温してくれた人の名前などをメールで送信。
+
+function temperature_sendMail(){
+
+  //メールの送信先を指定してください。
+  var recipient = '*************************'
+
+  //微熱の体温を設定してください。
+  var binetsu_taion = 36.9
+
+  //高熱の体温を設定してください。
+  var konetsu_taion = 37.5
+
+  //データの読み込み
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheetByName('temperature');
+
+  //今日の日付を取得
+  var today = new Date();
+  var today_str = String(Utilities.formatDate(today, 'JST', 'yyyy/MM/dd'))
+  var row_number = 0;
+  var lastRow = sheet.getLastRow()
+  var times = 0;
+  var day
+  var day_str
+
+  for(let j = 2; row_number == 0; j++){
+    day = sheet.getRange(j,1).getValue()
+    day_str = String(Utilities.formatDate(new Date(day), 'JST', 'yyyy/MM/dd'))
+     if(day_str == today_str){
+      row_number = j;
+     }
+     if(times == lastRow){
+      break
+     }
+     times = times+1
+  }
+
+  //検温してくれた人がいれば体温の調査を実行。いなければその旨をメールで送信。  
+  if(row_number!=0){
+    temperature_analysis(row_number,recipient,binetsu_taion,konetsu_taion)
+  }else{
+      const subject = '検温結果報告';
+      var body = '検温してくれた人はいませんでした。';
+
+      //メールを送信;
+      GmailApp.sendEmail(recipient,subject,body); 
+  }
+  
+}
+
+function temperature_analysis(row_number,recipient,binetsu_taion,konetsu_taion) {
+
+  //必要なデータの読み込み;
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheetByName('temperature');
+  const member = spreadsheet.getSheetByName('member_num');
+  const lastRow = sheet.getLastRow();
+
+
+  //検温の対象となる人数をスプレッドシートから読み取る；
+  var member_num = member.getRange(1,2).getValue()
+
+  //体温が高い人を検知;
+  var binetsu_names = [];
+  var konetsu_names = [];
+
+  for(let i = row_number; i <= lastRow; i++){
+
+    //binetsu_taion以上高い体温の人を微熱の可能性ありとして抽出;
+    if(sheet.getRange(i,3).getValue() >= binetsu_taion){
+      binetsu_names[binetsu_names.length] = sheet.getRange(i,2).getValue()+':'+String(sheet.getRange(i,3).getValue());
+    }
+
+    //konetsu_taion以上の体温の人を高熱として抽出;
+    if(sheet.getRange(i,3).getValue() >= konetsu_taion){
+      konetsu_names[konetsu_names.length] = sheet.getRange(i,2).getValue()+':'+String(sheet.getRange(i,3).getValue());
+    }
+  }
+
+  if(binetsu_names.length == 0){
+    binetsu_names = '該当者はいません。'
+  }
+
+   if(konetsu_names.length == 0){
+    konetsu_names = '該当者はいません。'
+  }
+
+  //今日検温してくれた人をリストアップ
+  var todays_names = []
+  for(let k = row_number; k <= lastRow; k++){
+    todays_names[todays_names.length] = String(sheet.getRange(k,2).getValue())
+  }
+  var yes_kenon = todays_names
+
+  //検温してくれた人の人数
+  var yes_kenon_num = yes_kenon.length
+
+  //検温してくれた人の割合
+  var yes_kenon_ratio = Math.floor((yes_kenon_num/member_num)*100)
+
+  
+  //メールの中身;
+  const subject = '検温結果報告';
+  var body = '微熱の可能性あり('+String(binetsu_taion)+'℃以上の人)↓ \n'+String(binetsu_names)+'\n\n高熱('+String(konetsu_taion)+'℃以上)の人↓\n'+String(konetsu_names)+'\n\n検温したのは'+String(member_num)+'人中'+String(yes_kenon_num)+'人: 全体の'+yes_kenon_ratio+'%↓\n'+String(yes_kenon);
+
+  //メールを送信;
+  GmailApp.sendEmail(recipient,subject,body); 
+}
