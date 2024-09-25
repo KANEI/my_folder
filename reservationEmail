@@ -1,0 +1,176 @@
+//予約フォームに入力された情報をもとに予約完了メールを送るプログラム。
+
+function reservationEmail() {
+
+const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+//シートの名前を入力
+const sheet = spreadsheet.getSheetByName('フォームの名前を入力');
+
+// フォームの回答を取得
+var LastRow = sheet.getLastRow()
+var ContentLength = 10
+var Content = []
+
+for(i=1;i<=ContentLength;i++){
+  var j = i-1
+  Content[j] = sheet.getRange(LastRow,i).getValue();
+}
+
+//日程と料金を入力。
+var Price = { 
+  '【平日割】10月10日(木) 18:00〜': '500',
+  '【平日割】10月11日(金) 13:00〜': '500',
+  '【平日割】10月11日(金) 18:00〜': '500',
+  '10月12日(土) 11:00〜': '1000',
+  '10月12日(土) 14:30〜': '1000',
+  '10月12日(土) 18:00〜': '1000',
+  '10月13日(日) 11:00〜': '1000',
+  '10月13日(日) 15:00〜': '1000'
+};
+
+//メールの確認事項に表示する項目を設定。
+ContentName = ['ご予約完了日: ','お名前: ','ふりがな: ','Mail: ','Tel: ','公演日時: ','チケット枚数: ','備考: ']
+
+// 自動返信メール件名
+var Subject = 'チケットご予約承りました。';
+      
+// 自動返信メール本文
+var Body = Content[1] + '様\n' +
+ '\n' +
+ 'この度は『＜公演名＞』のチケットをご予約いただき、誠にありがとうございます。\n' +
+ '下記の内容で受付いたしました。\n' +
+ '\n' +
+ '─────────────────────────\n' +
+ '【ご回答内容の確認】\n' +
+ ContentName[0] + String(Utilities.formatDate(new Date(Content[0]) , 'JST', 'yyyy/MM/dd'))+ '\n' +
+ ContentName[1] + Content[1] + '\n' +
+ ContentName[2] + Content[2] + '\n' +
+ ContentName[5] + Content[5] + '\n' +
+ '料金: '+ Price[Content[5]] + '円' + '\n' +
+ ContentName[6] + Content[6] + '\n' +
+ ContentName[3] + Content[3] + '\n' +
+ ContentName[4] + Content[4] + '\n' +
+ ContentName[7] + Content[7] + '\n' +
+ '\n' +
+ '【合計金額】\n' +
+ Price[Content[5]]*Content[6] + '円\n'+
+ '\n' +
+ '◆公演当日受付にて代金をお支払いください。\n' + 
+ '\n' +
+ '※開場は開演の30分前を予定しております。\n' + 
+ '※5分前にお越しいただけない場合、キャンセル扱いとさせていただくことがございます。お時間に余裕を持ってお越しください。\n' + 
+ '\n' +
+ 'それでは当日劇場にてお待ちしております。\n' + 
+ '\n' +
+ '─────────────────────────\n' +
+ '\n' +
+ '◆お問い合わせ\n' + 
+ '＜劇団名＞' + 
+ '＜公演名＞' + 
+ '\n' +
+ 'Mail: ＜メールアドレス＞\n' + 
+ 'Tel: ＜電話番号＞\n' +
+ '\n' +
+  '─────────────────────────'
+
+
+//メール送信
+  MailApp.sendEmail({
+    to: Content[3],
+    subject: Subject,
+    body: Body
+  });
+
+}
+
+//予約の状況をスプレッドシート・予約フォームに反映するプログラム。
+function Seat(){
+
+const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+//フォームの回答を集計するシートの名前を入力
+const sheet = spreadsheet.getSheetByName('********);
+var LastRow = sheet.getLastRow()
+
+//予約席の状況を反映するシートの名前を入力。
+const seat = spreadsheet.getSheetByName('****');
+
+//公演日程のリストを作成。
+var daylist = ['【平日割】10月10日(木) 18:00〜','【平日割】10月11日(金) 13:00〜','【平日割】10月11日(金) 18:00〜','10月12日(土) 11:00〜','10月12日(土) 14:30〜','10月12日(土) 18:00〜','10月13日(日) 11:00〜','10月13日(日) 15:00〜']
+
+//各公演日の予約数の情報をもつリストを作成。
+var daycount = [0,0,0,0,0,0,0,0]
+
+for(k=0;k<daylist.length;k++){
+  for(i=1;i<=LastRow;i++){
+   var j = i-1
+   if(day1[k]== sheet.getRange(i,6).getValue()){
+    daycount[k] = daycount[k]+ sheet.getRange(i,7).getValue() 
+   }
+  }
+}
+
+
+
+//予約数をスプレッドシートに入力。
+for(i=0;i<daylist.length;i++){
+  var l = i+2
+  seat.getRange(2,l).setValue(daycount[i])
+}
+
+
+//予約フォームの情報を直す。
+
+// どの選択肢を消すか。
+for(i=0;i<daylist.length;i++){
+  var l = i+2
+  //先ほどフォームに反映した情報をもとに、予約の可否をスプレッドシートに表示。その値を取得。
+  if(seat.getRange(7,l).getValue()=="不可"){
+    var elementToRemove = daylist[i];
+  }
+
+}
+
+// 配列から特定の要素を除く。
+function removeElementFromArray(array, elementToRemove) {
+
+  var newArray = array.filter(function(element) {
+    return element !== elementToRemove;
+  });
+
+  return newArray;
+}
+
+//新しい選択肢を設定。
+var newChoicesList = removeElementFromArray(daylist,elementToRemove);
+console.log(newChoicesList)
+
+//フォームの情報ゲット。URLを入力。
+var formId = '**********; 
+var form = FormApp.openById(formId);
+
+// フォームの質問を取得
+  var items = form.getItems();
+  
+// 質問のタイトルや種類を確認する
+  var targetQuestionTitle = '公演日時'; // 変更したい質問のタイトルを指定
+  
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var title = item.getTitle();
+    
+    //タイトルが一致する質問を探す
+    if (title === targetQuestionTitle) {
+      var dropdownItem = item.asListItem();
+      
+      // 選択肢を新しい選択肢に変更する
+      var newOptions = newChoicesList;
+      dropdownItem.setChoiceValues(newOptions);
+      
+      console.log('選択肢を更新しました: ' + newOptions);
+      break;
+    }
+  }
+
+}
